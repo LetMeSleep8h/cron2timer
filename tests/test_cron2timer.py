@@ -380,3 +380,64 @@ def test_cli_errors_exit_one_without_writing(tmp_path, capsys):
     outdir = str(tmp_path / "units")
     assert main([src, "--out-dir", outdir]) == 1
     assert not os.path.exists(outdir)
+
+
+# ---------- --user mode ----------
+
+def test_user_mode_reboot_service_targets_default_target():
+    jobs = parse_ok("@reboot /usr/bin/housekeeping.sh\n")
+    convert_jobs(jobs)
+    svc_system = render_service(jobs[0], user=False)
+    svc_user = render_service(jobs[0], user=True)
+    assert "WantedBy=multi-user.target" in svc_system
+    assert "WantedBy=default.target" in svc_user
+    assert "multi-user.target" not in svc_user
+
+
+def test_user_mode_ordinary_timer_keeps_timers_target():
+    jobs = parse_ok("0 4 * * * /usr/bin/backup.sh\n")
+    convert_jobs(jobs)
+    assert "WantedBy=timers.target" in render_timer(jobs[0])
+
+
+def test_user_mode_stdout_install_hint_uses_systemctl_user(tmp_path, capsys):
+    crontab = tmp_path / "ct"
+    crontab.write_text("0 4 * * * /usr/bin/backup.sh\n")
+    rc = main(["--user", "--stdout", str(crontab)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "systemctl --user daemon-reload" in out
+    assert "systemctl --user enable --now backup.timer" in out
+    assert "sudo" not in out
+
+
+def test_system_mode_install_hint_uses_sudo(tmp_path, capsys):
+    crontab = tmp_path / "ct"
+    crontab.write_text("0 4 * * * /usr/bin/backup.sh\n")
+    out_dir = tmp_path / "units"
+    rc = main(["--out-dir", str(out_dir), str(crontab)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "sudo systemctl daemon-reload" in out
+
+
+def test_user_mode_default_out_dir_is_the_user_unit_path(tmp_path, monkeypatch, capsys):
+    crontab = tmp_path / "ct"
+    crontab.write_text("0 4 * * * /usr/bin/backup.sh\n")
+    fake_home = tmp_path / "home"
+    fake_home.mkdir()
+    monkeypatch.setenv("HOME", str(fake_home))
+    monkeypatch.chdir(tmp_path)
+    rc = main(["--user", str(crontab)])
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert str(fake_home / ".config" / "systemd" / "user") in out
+    assert (fake_home / ".config" / "systemd" / "user" / "backup.timer").exists()
+
+
+def test_help_mentions_the_user_out_dir_default(capsys):
+    with pytest.raises(SystemExit):
+        main(["--help"])
+    out = capsys.readouterr().out
+    assert "~/.config/systemd/user" in out
+    assert "--user" in out

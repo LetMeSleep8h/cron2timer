@@ -47,6 +47,21 @@ After generating, copy the units into place and enable them:
 sudo cp units/* /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now backup-db.timer
+
+### As a user (no root)
+
+Many cron jobs run as a non-root user; user timers are the systemd-native way
+to schedule them. Add `--user`:
+
+```
+python3 cron2timer.py mycrontab --user --out-dir ~/.config/systemd/user
+systemctl --user daemon-reload
+systemctl --user enable --now backup-db.timer
+```
+
+With `--user`, `@reboot` services install to `default.target` (user managers
+have no `multi-user.target`); ordinary timers keep `WantedBy=timers.target`,
+which is already the user-native target.
 ```
 
 ## Example
