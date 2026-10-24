@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cron2timer"
+version = "1.0.0"
+description = "Convert crontab lines into systemd .service and .timer unit files"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Amir Hussain" }]
+requires-python = ">=3.8"
+keywords = ["cron", "crontab", "systemd", "timer", "sysadmin", "devops"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
+
+[project.scripts]
+cron2timer = "cron2timer:main"
+
+[project.urls]
+Homepage = "https://github.com/aamirtechs/cron2timer"
+Issues = "https://github.com/aamirtechs/cron2timer/issues"
+
+[tool.setuptools]
+py-modules = ["cron2timer"]
